@@ -121,3 +121,77 @@ export const KNOWN_MODELS: Record<BlockName, Record<string, KnownModel>> = {
 export function modelLabel(block: BlockName, model: string): string {
   return model === "Passthru" ? "None" : (KNOWN_MODELS[block]?.[model]?.label ?? model);
 }
+
+export interface KnobRange {
+  min: number;
+  max: number;
+  unit?: "dB" | "s" | "Hz";
+}
+
+// Measured on an LT25 (firmware 2.1.4) by turning every knob in Fender Tone
+// all the way down and up. Settings not listed are 0–1 knobs. "*" means
+// every model in the block.
+const RANGES: Record<BlockName, Record<string, Record<string, KnobRange>>> = {
+  stomp: {
+    Blackbox: { level: { min: -40, max: -7, unit: "dB" } },
+    Greenbox: { level: { min: -27, max: 0, unit: "dB" } },
+    BigFuzz: { level: { min: -40, max: -8, unit: "dB" } },
+    ChromeGate: { threshold: { min: -70, max: -30, unit: "dB" } },
+    MustangFiveBandEq1: Object.fromEntries(
+      ["low", "lowmid", "mid", "highmid", "high"].map((k) => [k, { min: -12, max: 12, unit: "dB" as const }]),
+    ),
+  },
+  mod: {
+    Vibratone: { rotor: { min: 0.67, max: 5.67, unit: "Hz" } },
+    SineTremolo: { rate: { min: 1.3, max: 10, unit: "Hz" } },
+    ChorusTriangle: { rateHz: { min: 0.08, max: 10, unit: "Hz" } },
+    TriangleFlanger: { rate: { min: 0.08, max: 10, unit: "Hz" } },
+    Phaser: { rate: { min: 0.08, max: 10, unit: "Hz" } },
+    StepFilter: { rate: { min: 0.08, max: 10, unit: "Hz" } },
+  },
+  amp: { "*": { volume: { min: -60, max: 0, unit: "dB" } } },
+  delay: {
+    "*": {
+      time: { min: 0.03, max: 1, unit: "s" },
+      dlyTime: { min: 0.03, max: 1, unit: "s" },
+      level: { min: 0.001, max: 1 },
+      wetLvl: { min: 0.001, max: 1 },
+    },
+  },
+  reverb: { "*": { level: { min: 0.001, max: 1 } } },
+};
+
+// Settings Fender Tone doesn't show as knobs: they stayed put while every
+// knob was turned. Tempo follows the rate or time knob (see syncTempo).
+const FIXED_EVERYWHERE = new Set([
+  "tapTimeBPM",
+  "noteDivision",
+  "gateDetectorPosition",
+  "bias",
+  "sag",
+  "dwell",
+  "diffuse",
+  "attenuate",
+  "chase",
+  "duty",
+  "dist",
+  "lrPhase",
+  "avgDelay",
+  "stereoSpread",
+  "hysteresis",
+  "attenuation",
+]);
+const FIXED: Partial<Record<BlockName, Record<string, string[]>>> = {
+  stomp: { MustangFiveBandEq1: ["gain"] },
+  mod: { Phaser: ["feedback", "shape"], TriangleFlanger: ["phase"], SineTremolo: ["shape"] },
+};
+
+/** The measured range of a knob, when it isn't a plain 0–1 knob or hasn't been measured. */
+export function knobRange(block: BlockName, model: string, key: string): KnobRange | undefined {
+  return RANGES[block][model]?.[key] ?? RANGES[block]["*"]?.[key];
+}
+
+/** True for settings that Fender Tone doesn't let you change. Editors should leave them alone. */
+export function isFixedSetting(block: BlockName, model: string, key: string): boolean {
+  return FIXED_EVERYWHERE.has(key) || (FIXED[block]?.[model]?.includes(key) ?? false);
+}

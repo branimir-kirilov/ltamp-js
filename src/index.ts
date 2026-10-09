@@ -27,6 +27,7 @@ export {
   presetName,
   shortModel,
   summarize,
+  syncTempo,
   toTone,
   ToneError,
   type Block,
@@ -37,4 +38,4 @@ export {
   type Tone,
 } from "./tone.js";
 export { buildCatalog, type Catalog, type ModelEntry, type ParamSpec } from "./catalog.js";
-export { KNOWN_MODELS, modelLabel, type KnownModel } from "./models.js";
+export { KNOWN_MODELS, isFixedSetting, knobRange, modelLabel, type KnobRange, type KnownModel } from "./models.js";

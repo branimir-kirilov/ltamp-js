@@ -52,6 +52,10 @@ factory-blank slot from a real tone that happens to be named "EMPTY".
 screen names and default settings, so a catalog is complete even when no preset
 on the amp uses a model; `buildCatalog` adds what the amp's presets show.
 `modelLabel(block, model)` gives the screen name, e.g. `Greenbox` → "Blues Drive".
+`knobRange(block, model, key)` gives knob ranges measured in Fender Tone where
+they aren't 0–1 (dB levels, rates in Hz, delay times in seconds), and
+`isFixedSetting` flags settings Fender Tone doesn't expose. `buildPreset`
+keeps the tap-tempo setting in step with the rate or time knob (`syncTempo`).
 
 | Method | What it does |
 |---|---|

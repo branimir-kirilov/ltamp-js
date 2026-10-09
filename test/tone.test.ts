@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildCatalog } from "../src/catalog.js";
-import { KNOWN_MODELS, modelLabel } from "../src/models.js";
-import { buildPreset, displayName, isBlank, summarize, toTone, ToneError, type Preset } from "../src/tone.js";
+import { isFixedSetting, KNOWN_MODELS, knobRange, modelLabel } from "../src/models.js";
+import { buildPreset, displayName, isBlank, summarize, syncTempo, toTone, ToneError, type Preset } from "../src/tone.js";
 
 // Hand-made presets in the amp's format (not copies of factory presets).
 const node = (nodeId: string, FenderId: string, dspUnitParameters: Record<string, unknown> = {}) => ({
@@ -193,3 +193,25 @@ describe("displayName", () => {
   });
 });
 
+
+describe("measured knobs", () => {
+  it("gives measured ranges, with block-wide ones", () => {
+    expect(knobRange("stomp", "BigFuzz", "level")).toEqual({ min: -40, max: -8, unit: "dB" });
+    expect(knobRange("amp", "Twin65", "volume")).toEqual({ min: -60, max: 0, unit: "dB" });
+    expect(knobRange("delay", "TapeDelayLite", "dlyTime")).toEqual({ min: 0.03, max: 1, unit: "s" });
+    expect(knobRange("stomp", "BigFuzz", "gain")).toBeUndefined();
+  });
+
+  it("knows which settings aren't knobs", () => {
+    expect(isFixedSetting("amp", "Twin65", "bias")).toBe(true);
+    expect(isFixedSetting("mod", "Phaser", "feedback")).toBe(true);
+    expect(isFixedSetting("mod", "TriangleFlanger", "feedback")).toBe(false);
+  });
+
+  it("keeps tap tempo in step with rate and time, as Fender Tone does", () => {
+    expect(syncTempo({ rotor: 5.67, tapTimeBPM: 120 }).tapTimeBPM).toBe(340.2);
+    expect(syncTempo({ rateHz: 0.08, tapTimeBPM: 120 }).tapTimeBPM).toBe(4.8);
+    expect(syncTempo({ time: 0.03, tapTimeBPM: 120 }).tapTimeBPM).toBe(2000);
+    expect(syncTempo({ level: 1 })).toEqual({ level: 1 });
+  });
+});

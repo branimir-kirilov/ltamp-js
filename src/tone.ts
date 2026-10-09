@@ -4,6 +4,7 @@
 // the browser.
 
 import type { Catalog } from "./catalog.js";
+import { knobRange } from "./models.js";
 
 export const BLOCKS = ["stomp", "mod", "amp", "delay", "reverb"] as const;
 export type BlockName = (typeof BLOCKS)[number];
@@ -156,14 +157,16 @@ export function buildPreset(tone: Tone, catalog: Catalog): BuildResult {
         continue;
       }
       if (spec.type === "number" && spec.min !== undefined && spec.max !== undefined) {
-        // Most models appear in only a few presets, so the seen range is
-        // narrow. Always allow the 0–1 knob range; warn only when off-scale.
-        // Negative ranges are dB levels, where quieter is always safe.
+        // Measured knob ranges where known. Otherwise most models appear in
+        // only a few presets, so the seen range is narrow: always allow the
+        // 0–1 knob range, and for dB levels anything quieter.
         const v = value as number;
-        const lo = spec.min < 0 ? Math.min(spec.min, -60) : Math.min(spec.min, 0);
-        const hi = Math.max(spec.max, 1);
+        const measured = knobRange(blockName, shortModel(id), key);
+        const lo = measured?.min ?? (spec.min < 0 ? Math.min(spec.min, -60) : Math.min(spec.min, 0));
+        const hi = measured?.max ?? Math.max(spec.max, 1);
         if (v < lo || v > hi) {
-          warnings.push(`${blockName} ${shortModel(id)}: ${key}=${v} looks off-scale (seen on this amp: ${lo} to ${hi})`);
+          const where = measured ? "Fender Tone's range" : "seen on this amp";
+          warnings.push(`${blockName} ${shortModel(id)}: ${key}=${v} looks off-scale (${where}: ${lo} to ${hi})`);
         }
       }
       if (spec.type === "string" && spec.values && !spec.values.includes(value as string)) {
@@ -171,6 +174,7 @@ export function buildPreset(tone: Tone, catalog: Catalog): BuildResult {
       }
       params[key] = value;
     }
+    syncTempo(params);
     if (blockName !== "amp") {
       params.bypass = block.enabled === false;
       params.bypassType ??= blockName === "delay" || blockName === "reverb" ? "Pre" : "Post";
@@ -201,6 +205,22 @@ export function buildPreset(tone: Tone, catalog: Catalog): BuildResult {
     audioGraph: { nodes: graphNodes, connections: chainConnections() },
   };
   return { preset, warnings };
+}
+
+const RATE_KEYS = ["rate", "rateHz", "rotor"];
+const TIME_KEYS = ["time", "dlyTime"];
+
+/**
+ * Keep the tap-tempo setting in step with the rate or time knob, the way
+ * Fender Tone does: rate in Hz × 60, or 60 ÷ delay time in seconds.
+ */
+export function syncTempo(params: Record<string, ParamValue>): Record<string, ParamValue> {
+  if (typeof params.tapTimeBPM !== "number") return params;
+  const rate = RATE_KEYS.map((k) => params[k]).find((v) => typeof v === "number") as number | undefined;
+  const time = TIME_KEYS.map((k) => params[k]).find((v) => typeof v === "number") as number | undefined;
+  const bpm = rate !== undefined ? rate * 60 : time ? 60 / time : undefined;
+  if (bpm !== undefined) params.tapTimeBPM = Number(bpm.toFixed(6));
+  return params;
 }
 
 /** Stereo series chain: input → stomp → mod → amp → delay → reverb → output. */
