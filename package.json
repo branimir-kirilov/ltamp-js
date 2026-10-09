@@ -12,6 +12,10 @@
     "./node": {
       "types": "./dist/node.d.ts",
       "default": "./dist/node.js"
+    },
+    "./webhid": {
+      "types": "./dist/webhid.d.ts",
+      "default": "./dist/webhid.js"
     }
   },
   "files": [
@@ -36,7 +40,8 @@
     "guitar",
     "amp",
     "hid",
-    "usb"
+    "usb",
+    "webhid"
   ],
   "dependencies": {
     "node-hid": "^3.4.0"

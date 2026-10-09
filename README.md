@@ -1,7 +1,7 @@
 # ltamp-js
 
-Control Fender Mustang LT guitar amps over USB from Node.js — read presets,
-switch slots, and audition new tones without saving them.
+Control Fender Mustang LT guitar amps over USB from Node.js and the browser —
+read presets, switch slots, and audition new tones without saving them.
 
 > Unofficial. Not affiliated with or endorsed by Fender. Tested on the
 > Mustang LT25 (firmware 2.1.4); other LT models may work but are untested.
@@ -22,6 +22,31 @@ await amp.close();
 ```
 
 Close Fender Tone first — only one program can hold the amp's USB connection.
+
+### In the browser
+
+Chrome and Edge on desktop support WebHID, on `https://` pages or `localhost`.
+The device picker must be opened from a click:
+
+```ts
+import { LtAmp, WebHidTransport, requestAmp } from "ltamp-js/webhid";
+
+button.onclick = async () => {
+  const device = await requestAmp(); // browser's device picker
+  if (!device) return;               // user cancelled
+  const amp = new LtAmp(await WebHidTransport.open(device));
+  await amp.connect();
+};
+```
+
+After the first time, `grantedAmps()` returns the amp without the picker.
+
+### Tones
+
+`toTone`, `buildPreset`, `buildCatalog` and `isBlank` convert between the
+amp's preset JSON and a simple five-block tone format (stomp → mod → amp →
+delay → reverb), validate tones against the models found on the amp, and tell
+a factory-blank slot from a real tone that happens to be named "EMPTY".
 
 | Method | What it does |
 |---|---|

@@ -8,7 +8,7 @@ export const LT_PRODUCT_IDS = {
 
 /**
  * A raw connection to the amp's HID interface. Implementations exist for
- * Node (node-hid) and, later, the browser (WebHID).
+ * Node (node-hid) and the browser (WebHID).
  */
 export interface Transport {
   /** Send one 64-byte report (no report ID; the transport adds it if needed). */
