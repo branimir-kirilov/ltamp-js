@@ -1,0 +1,47 @@
+{
+  "name": "ltamp-js",
+  "version": "0.1.0",
+  "description": "Control Fender Mustang LT amps over USB from Node.js and the browser",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "default": "./dist/node.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "probe": "tsx examples/probe.ts"
+  },
+  "keywords": [
+    "fender",
+    "mustang",
+    "lt25",
+    "guitar",
+    "amp",
+    "hid",
+    "usb"
+  ],
+  "dependencies": {
+    "node-hid": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}
