@@ -22,6 +22,10 @@ describe("encodeMessage", () => {
     ["auditionPreset", encodeMessage("auditionPreset", { presetData: '{"a":1}' })],
     ["exitAuditionPreset", encodeMessage("exitAuditionPreset", { exit: true })],
     ["auditionStateRequest", encodeMessage("auditionStateRequest", { request: true })],
+    [
+      "savePresetAs40",
+      encodeMessage("savePresetAs", { presetData: '{"a":1}', isLoadPreset: false, presetSlot: 40 }),
+    ],
     ["firmwareVersionResponse", encodeMessage("firmwareVersionStatus", { version: "2.1.4" }, ResponseType.IS_LAST_ACK)],
     [
       "presetJSONResponse",

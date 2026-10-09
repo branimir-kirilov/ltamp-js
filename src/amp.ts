@@ -148,6 +148,18 @@ export class LtAmp {
     await this.request("auditionPreset", { presetData: presetJson }, ["auditionPresetStatus"]);
   }
 
+  /**
+   * Write a preset into a slot, replacing whatever is there. With `load`, the
+   * amp also switches to it. Callers should back up the slot first.
+   */
+  async savePreset(slot: number, presetJson: string, { load = false } = {}): Promise<void> {
+    assertSlot(slot);
+    await this.request("savePresetAs", { presetData: presetJson, isLoadPreset: load, presetSlot: slot }, [
+      "newPresetSavedStatus",
+      "presetSavedStatus",
+    ]);
+  }
+
   async exitAudition(): Promise<void> {
     await this.request("exitAuditionPreset", { exit: true }, ["exitAuditionPresetStatus"]);
   }

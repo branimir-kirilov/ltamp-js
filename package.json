@@ -24,7 +24,9 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "probe": "tsx examples/probe.ts"
+    "probe": "tsx examples/probe.ts",
+    "audition": "tsx examples/audition.ts",
+    "save": "tsx examples/save.ts"
   },
   "keywords": [
     "fender",

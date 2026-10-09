@@ -1,0 +1,214 @@
+{
+  "nodeType": "preset",
+  "nodeId": "preset",
+  "version": "1.1",
+  "numInputs": 2,
+  "numOutputs": 2,
+  "info": {
+    "displayName": "NUMB    SOLO    ",
+    "preset_id": "d28148aa-6b4d-4e33-9b6a-96e75a64c06b",
+    "author": "",
+    "source_id": "",
+    "timestamp": 1791569863,
+    "created_at": 0,
+    "product_id": "mustang-lt",
+    "is_factory_default": false,
+    "bpm": 0
+  },
+  "audioGraph": {
+    "nodes": [
+      {
+        "nodeId": "stomp",
+        "nodeType": "dspUnit",
+        "FenderId": "DUBS_BigFuzz",
+        "dspUnitParameters": {
+          "bypass": false,
+          "bypassType": "Post",
+          "level": -20,
+          "gain": 0.65,
+          "tone": 0.55
+        }
+      },
+      {
+        "nodeId": "mod",
+        "nodeType": "dspUnit",
+        "FenderId": "DUBS_Passthru",
+        "dspUnitParameters": {
+          "bypass": false,
+          "bypassType": "Post"
+        }
+      },
+      {
+        "nodeId": "amp",
+        "nodeType": "dspUnit",
+        "FenderId": "DUBS_DR103",
+        "dspUnitParameters": {
+          "volume": -10,
+          "gatePreset": "off",
+          "gateDetectorPosition": "jack",
+          "cabsimType": "4x12v",
+          "gain": 0.3,
+          "treb": 0.6,
+          "mid": 0.55,
+          "bass": 0.55,
+          "sag": "match",
+          "bias": 0.5,
+          "master": 0.8,
+          "presence": 0.55
+        }
+      },
+      {
+        "nodeId": "delay",
+        "nodeType": "dspUnit",
+        "FenderId": "DUBS_MonoDelay",
+        "dspUnitParameters": {
+          "bypass": false,
+          "bypassType": "Pre",
+          "level": 0.3,
+          "time": 0.44,
+          "tapTimeBPM": 136.363636,
+          "noteDivision": "off",
+          "feedback": 0.25,
+          "brite": 0.5,
+          "attenuate": 0.5
+        }
+      },
+      {
+        "nodeId": "reverb",
+        "nodeType": "dspUnit",
+        "FenderId": "DUBS_LargeHallReverb",
+        "dspUnitParameters": {
+          "bypass": false,
+          "bypassType": "Pre",
+          "level": 0.35,
+          "decay": 0.45,
+          "dwell": 0.5,
+          "diffuse": 0.5,
+          "tone": 0.6
+        }
+      }
+    ],
+    "connections": [
+      {
+        "input": {
+          "index": 0,
+          "nodeId": "preset"
+        },
+        "output": {
+          "index": 0,
+          "nodeId": "stomp"
+        }
+      },
+      {
+        "input": {
+          "index": 1,
+          "nodeId": "preset"
+        },
+        "output": {
+          "index": 1,
+          "nodeId": "stomp"
+        }
+      },
+      {
+        "input": {
+          "index": 0,
+          "nodeId": "stomp"
+        },
+        "output": {
+          "index": 0,
+          "nodeId": "mod"
+        }
+      },
+      {
+        "input": {
+          "index": 1,
+          "nodeId": "stomp"
+        },
+        "output": {
+          "index": 1,
+          "nodeId": "mod"
+        }
+      },
+      {
+        "input": {
+          "index": 0,
+          "nodeId": "mod"
+        },
+        "output": {
+          "index": 0,
+          "nodeId": "amp"
+        }
+      },
+      {
+        "input": {
+          "index": 1,
+          "nodeId": "mod"
+        },
+        "output": {
+          "index": 1,
+          "nodeId": "amp"
+        }
+      },
+      {
+        "input": {
+          "index": 0,
+          "nodeId": "amp"
+        },
+        "output": {
+          "index": 0,
+          "nodeId": "delay"
+        }
+      },
+      {
+        "input": {
+          "index": 1,
+          "nodeId": "amp"
+        },
+        "output": {
+          "index": 1,
+          "nodeId": "delay"
+        }
+      },
+      {
+        "input": {
+          "index": 0,
+          "nodeId": "delay"
+        },
+        "output": {
+          "index": 0,
+          "nodeId": "reverb"
+        }
+      },
+      {
+        "input": {
+          "index": 1,
+          "nodeId": "delay"
+        },
+        "output": {
+          "index": 1,
+          "nodeId": "reverb"
+        }
+      },
+      {
+        "input": {
+          "index": 0,
+          "nodeId": "reverb"
+        },
+        "output": {
+          "index": 0,
+          "nodeId": "preset"
+        }
+      },
+      {
+        "input": {
+          "index": 1,
+          "nodeId": "reverb"
+        },
+        "output": {
+          "index": 1,
+          "nodeId": "preset"
+        }
+      }
+    ]
+  }
+}
