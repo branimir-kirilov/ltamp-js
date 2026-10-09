@@ -26,7 +26,8 @@
     "test": "vitest run",
     "probe": "tsx examples/probe.ts",
     "audition": "tsx examples/audition.ts",
-    "save": "tsx examples/save.ts"
+    "save": "tsx examples/save.ts",
+    "prepare": "npm run build"
   },
   "keywords": [
     "fender",
