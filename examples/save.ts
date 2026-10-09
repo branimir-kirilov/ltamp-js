@@ -1,5 +1,6 @@
 // Save a preset file to a slot. Backs up the slot first and refuses to
-// overwrite one that isn't empty unless you pass --force.
+// overwrite it unless you pass --force. A slot named "EMPTY" can still hold a
+// real tone, so names alone never count as safe to overwrite.
 //   npm run save -- examples/tones/comfortably-numb-outro.json 40
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -22,8 +23,12 @@ try {
 
   const existing = await amp.getPreset(slot);
   const existingName: string = JSON.parse(existing.json).info?.displayName?.trim() ?? "?";
-  if (existingName !== "EMPTY" && flag !== "--force") {
-    console.error(`Slot ${slot} holds "${existingName}". Pass --force to overwrite it.`);
+  if (flag !== "--force") {
+    const ampNode = existing.json && JSON.parse(existing.json).audioGraph?.nodes?.find((n: { nodeId: string }) => n.nodeId === "amp");
+    console.error(
+      `Slot ${slot} holds "${existingName}" (${ampNode?.FenderId?.replace("DUBS_", "") ?? "unknown amp"}). ` +
+        "Pass --force to overwrite it; the current contents will be backed up first.",
+    );
     process.exitCode = 1;
   } else {
     const backupDir = join(import.meta.dirname, "..", "backups", "overwritten");
