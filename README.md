@@ -45,8 +45,13 @@ After the first time, `grantedAmps()` returns the amp without the picker.
 
 `toTone`, `buildPreset`, `buildCatalog` and `isBlank` convert between the
 amp's preset JSON and a simple five-block tone format (stomp → mod → amp →
-delay → reverb), validate tones against the models found on the amp, and tell
-a factory-blank slot from a real tone that happens to be named "EMPTY".
+delay → reverb), validate tones against the amp's models, and tell a
+factory-blank slot from a real tone that happens to be named "EMPTY".
+
+`KNOWN_MODELS` lists all 46 LT25 models (20 amps, 26 effects) with the amp's
+screen names and default settings, so a catalog is complete even when no preset
+on the amp uses a model; `buildCatalog` adds what the amp's presets show.
+`modelLabel(block, model)` gives the screen name, e.g. `Greenbox` → "Blues Drive".
 
 | Method | What it does |
 |---|---|

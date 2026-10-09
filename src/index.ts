@@ -37,3 +37,4 @@ export {
   type Tone,
 } from "./tone.js";
 export { buildCatalog, type Catalog, type ModelEntry, type ParamSpec } from "./catalog.js";
+export { KNOWN_MODELS, modelLabel, type KnownModel } from "./models.js";

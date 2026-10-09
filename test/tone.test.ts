@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildCatalog } from "../src/catalog.js";
+import { KNOWN_MODELS, modelLabel } from "../src/models.js";
 import { buildPreset, displayName, isBlank, summarize, toTone, ToneError, type Preset } from "../src/tone.js";
 
 // Hand-made presets in the amp's format (not copies of factory presets).
@@ -61,6 +62,31 @@ describe("catalog", () => {
     expect(dr103.usedBy).toEqual(["TEST    LEAD", "LOUD"]);
     expect(catalog.stomp.BigFuzz.params.bypass).toBeUndefined();
   });
+
+  it("knows every LT25 model even when no preset uses it", () => {
+    const empty = buildCatalog([]);
+    const count = (b: keyof typeof empty) => Object.keys(empty[b]).length;
+    expect([count("stomp"), count("mod"), count("amp"), count("delay"), count("reverb")]).toEqual([11, 7, 20, 3, 5]);
+    expect(empty.stomp.Blackbox).toMatchObject({ label: "Rock Dirt", defaults: { level: -30, gain: 0.5, tone: 0.333 } });
+    expect(empty.delay.ReverseDelay.params.time).toEqual({ type: "number", min: 0.4, max: 0.4 });
+  });
+
+  it("still learns models it doesn't know from presets", () => {
+    const future = { audioGraph: { nodes: [node("amp", "DUBS_FutureAmp", { gain: 0.2 })] } } as Preset;
+    expect(buildCatalog([future]).amp.FutureAmp).toEqual({
+      label: "FutureAmp",
+      params: { gain: { type: "number", min: 0.2, max: 0.2 } },
+      defaults: { gain: 0.2 },
+      usedBy: [],
+    });
+  });
+
+  it("labels models with the amp's screen names", () => {
+    expect(modelLabel("amp", "DR103")).toBe("70s UK Clean");
+    expect(modelLabel("stomp", "Greenbox")).toBe("Blues Drive");
+    expect(modelLabel("delay", "Passthru")).toBe("None");
+    expect(modelLabel("amp", "FutureAmp")).toBe("FutureAmp");
+  });
 });
 
 describe("isBlank", () => {
@@ -104,8 +130,9 @@ describe("buildPreset", () => {
       "DUBS_Passthru",
       "DUBS_Passthru",
     ]);
-    expect(nodes[0].dspUnitParameters).toEqual({ level: -20, gain: 0.8, tone: 0.5, bypass: false, bypassType: "Post" });
-    expect(nodes[2].dspUnitParameters).toEqual({ volume: -10, gain: 0.3, treb: 0.6, cabsimType: "4x12v", bright: true });
+    // Factory defaults for known models; settings seen only in presets are kept too.
+    expect(nodes[0].dspUnitParameters).toEqual({ ...KNOWN_MODELS.stomp.BigFuzz.defaults, gain: 0.8, bypass: false, bypassType: "Post" });
+    expect(nodes[2].dspUnitParameters).toEqual({ ...KNOWN_MODELS.amp.DR103.defaults, bright: true });
     expect(preset.audioGraph!.connections).toHaveLength(12);
     expect(preset.info!.displayName).toBe("NUMB            ");
     expect(summarize(preset)).toBe("BigFuzz → DR103");
@@ -113,7 +140,9 @@ describe("buildPreset", () => {
 
   it("round-trips through toTone", () => {
     const { preset } = buildPreset(toTone(lead), catalog);
-    expect(toTone(preset)).toEqual(toTone(lead));
+    // Settings the tone leaves out are filled in; everything it gives survives.
+    expect(toTone(preset)).toMatchObject(toTone(lead));
+    expect(toTone(buildPreset(toTone(preset), catalog).preset)).toEqual(toTone(preset));
   });
 
   it("accepts the DUBS_ prefix", () => {
