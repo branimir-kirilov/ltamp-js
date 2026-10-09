@@ -55,6 +55,8 @@ export class LtAmp {
   private pending?: Pending;
   private queue: Promise<unknown> = Promise.resolve();
   private closed = false;
+  /** Writes in flight. Each message's reports must reach the amp back to back. */
+  private writing: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly transport: Transport,
@@ -169,12 +171,21 @@ export class LtAmp {
     return reply.payload.isAuditioning ?? false;
   }
 
-  /** Send a message without waiting for a reply. */
-  async send<N extends PayloadName>(name: N, payload: Partial<PayloadOf<N>>): Promise<void> {
-    if (this.closed) throw new Error("Amp connection is closed");
-    for (const report of frame(encodeMessage(name, payload))) {
-      await this.transport.write(report);
-    }
+  /**
+   * Send a message without waiting for a reply. Messages are written one at a
+   * time: a long message spans many reports, and in the browser each write is
+   * asynchronous, so without this the heartbeat could land between a tone's
+   * reports and garble it (the amp then drops the connection).
+   */
+  send<N extends PayloadName>(name: N, payload: Partial<PayloadOf<N>>): Promise<void> {
+    if (this.closed) return Promise.reject(new Error("Amp connection is closed"));
+    const reports = frame(encodeMessage(name, payload));
+    const write = async () => {
+      for (const report of reports) await this.transport.write(report);
+    };
+    const result = this.writing.then(write, write);
+    this.writing = result.catch(() => {});
+    return result;
   }
 
   /** Send a message and wait for the first reply whose payload is one of `expect`. */
