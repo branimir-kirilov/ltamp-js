@@ -66,8 +66,10 @@ export class WebHidTransport implements Transport {
   private readonly onInput = (event: Event) => {
     const { device, data } = event as HIDInputReportEvent;
     if (device !== this.device) return;
-    // WebHID strips the report ID and passes it separately.
-    this.reportHandler(new Uint8Array(data.buffer, data.byteOffset, data.byteLength), false);
+    // WebHID should strip the report ID, but on Windows the amp's reports still
+    // arrive with a leading 0x00. Frame tags are never zero, so detect it.
+    const bytes = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+    this.reportHandler(bytes, bytes[0] === 0x00);
   };
 
   private readonly onDisconnect = (event: Event) => {
