@@ -2,7 +2,7 @@
 // plus whatever the presets on the connected amp show (extra models, and the
 // range of values each setting takes in practice).
 
-import { KNOWN_MODELS } from "./models.js";
+import { CHOICES, KNOWN_MODELS } from "./models.js";
 import { BLOCKS, shortModel, type BlockName, type ParamValue, type Preset } from "./tone.js";
 
 export interface ParamSpec {
@@ -54,6 +54,9 @@ export function buildCatalog(presets: Preset[]): Catalog {
       entry.label = known.label;
       entry.defaults = { ...entry.defaults, ...known.defaults };
       for (const [key, value] of Object.entries(known.defaults)) record(entry, key, value);
+      for (const [key, values] of Object.entries(CHOICES[block]?.[model] ?? {})) {
+        for (const value of values) record(entry, key, value);
+      }
     }
   }
   return catalog;

@@ -39,4 +39,17 @@ export {
   type Tone,
 } from "./tone.js";
 export { buildCatalog, type Catalog, type ModelEntry, type ParamSpec } from "./catalog.js";
-export { KNOWN_MODELS, isFixedSetting, knobRange, modelLabel, type KnobRange, type KnownModel } from "./models.js";
+export {
+  CHOICES,
+  KNOWN_MODELS,
+  dialPosition,
+  dialReading,
+  dialValue,
+  isFixedSetting,
+  knobRange,
+  knobScale,
+  modelLabel,
+  type KnobRange,
+  type KnobScale,
+  type KnownModel,
+} from "./models.js";

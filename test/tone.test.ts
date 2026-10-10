@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildCatalog } from "../src/catalog.js";
-import { isFixedSetting, KNOWN_MODELS, knobRange, modelLabel } from "../src/models.js";
+import { dialPosition, dialReading, dialValue, isFixedSetting, KNOWN_MODELS, knobRange, knobScale, modelLabel } from "../src/models.js";
 import { blankPreset, buildPreset, displayName, presetName, isBlank, summarize, syncTempo, toTone, ToneError, type Preset } from "../src/tone.js";
 
 // Hand-made presets in the amp's format (not copies of factory presets).
@@ -228,5 +228,35 @@ describe("measured knobs", () => {
     expect(syncTempo({ rateHz: 0.08, tapTimeBPM: 120 }).tapTimeBPM).toBe(4.8);
     expect(syncTempo({ time: 0.03, tapTimeBPM: 120 }).tapTimeBPM).toBe(2000);
     expect(syncTempo({ level: 1 })).toEqual({ level: 1 });
+  });
+});
+
+describe("knob display scales (measured in Fender Tone)", () => {
+  const reads = (block: Parameters<typeof knobScale>[0], model: string, key: string, value: number) => {
+    const scale = knobScale(block, model, key)!;
+    const range = knobRange(block, model, key);
+    return dialReading(dialPosition(value, scale, range), scale);
+  };
+
+  it("matches what the amp showed for the test tones", () => {
+    expect(reads("amp", "LinearGain", "gain", 0.5)).toBe("5.5");
+    expect(reads("stomp", "VariFuzz", "level", 0.074356)).toBe("2.5");
+    expect(reads("stomp", "VariFuzz", "gain", 0.201785)).toBe("4.4");
+    expect(reads("stomp", "VariFuzz", "level", 0.5)).toBe("7.2");
+    expect(reads("mod", "ChorusTriangle", "level", 0.5)).toBe("7.2");
+    expect(reads("mod", "ChorusTriangle", "rateHz", 5.04)).toBe("8.6");
+  });
+
+  it("round-trips between dial and stored value", () => {
+    for (const [scale, range] of [["oneToTen", undefined], ["taper", undefined], ["log", { min: 0.08, max: 10 }]] as const) {
+      for (const v of [0.1, 0.25, 0.5, 0.9]) {
+        const value = range ? range.min + v * (range.max - range.min) : v;
+        expect(dialValue(dialPosition(value, scale, range), scale, range)).toBeCloseTo(value, 6);
+      }
+    }
+  });
+
+  it("knows the Fuzz's VARI positions", () => {
+    expect(buildCatalog([]).stomp.VariFuzz.params.tone.values).toEqual(["normal", "tight", "loose"]);
   });
 });

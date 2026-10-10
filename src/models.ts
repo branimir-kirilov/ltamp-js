@@ -195,3 +195,96 @@ export function knobRange(block: BlockName, model: string, key: string): KnobRan
 export function isFixedSetting(block: BlockName, model: string, key: string): boolean {
   return FIXED_EVERYWHERE.has(key) || (FIXED[block]?.[model]?.includes(key) ?? false);
 }
+
+// ---------- how the amp displays each knob ----------
+//
+// Measured by writing known values to test slots and reading what Fender
+// Tone shows. Most 0-1 knobs read 1-10, linearly (0.5 shows as 5.5). Level
+// knobs on the fuzz and some mod effects follow a volume-pot curve (0.5
+// shows as 7.2), and mod Speed knobs are logarithmic across their Hz range.
+
+/** How a knob's stored value maps to the number the amp shows. */
+export type KnobScale =
+  /** Shows 1-10, linear in the stored 0-1 value. */
+  | "oneToTen"
+  /** Shows 0-10 along the measured volume-pot curve. */
+  | "taper"
+  /** Shows 0-10, logarithmic between the knob's min and max (Hz). */
+  | "log";
+
+const TAPERED: Partial<Record<BlockName, Record<string, string[]>>> = {
+  stomp: { VariFuzz: ["level", "gain"] },
+  mod: { ChorusTriangle: ["level"], TriangleFlanger: ["level"], SineTremolo: ["level"] },
+};
+const LOG_SPEED: Partial<Record<BlockName, Record<string, string[]>>> = {
+  mod: { ChorusTriangle: ["rateHz"], TriangleFlanger: ["rate"], Phaser: ["rate"], StepFilter: ["rate"], SineTremolo: ["rate"] },
+};
+
+/** Stored value → fraction of the dial (0-1), measured on an LT25 Fuzz. */
+const TAPER_POINTS: [number, number][] = [
+  [0, 0],
+  [0.02, 0.14],
+  [0.1, 0.3],
+  [0.2, 0.44],
+  [0.4, 0.64],
+  [0.6, 0.79],
+  [0.8, 0.92],
+  [1, 1],
+];
+
+/**
+ * The display scale of a knob, or undefined for knobs shown in their own
+ * unit (dB, seconds) or not yet measured.
+ */
+export function knobScale(block: BlockName, model: string, key: string): KnobScale | undefined {
+  if (TAPERED[block]?.[model]?.includes(key)) return "taper";
+  if (LOG_SPEED[block]?.[model]?.includes(key)) return "log";
+  if (knobRange(block, model, key)) return undefined;
+  return "oneToTen";
+}
+
+function interpolate(x: number, points: [number, number][]): number {
+  const v = Math.min(1, Math.max(0, x));
+  for (let i = 1; i < points.length; i++) {
+    const [x0, y0] = points[i - 1];
+    const [x1, y1] = points[i];
+    if (v <= x1) return y0 + ((v - x0) / (x1 - x0)) * (y1 - y0);
+  }
+  return 1;
+}
+
+/** Where a stored value sits on the dial, 0 (fully left) to 1 (fully right). */
+export function dialPosition(value: number, scale: KnobScale, range = { min: 0, max: 1 }): number {
+  switch (scale) {
+    case "taper":
+      return interpolate(value, TAPER_POINTS);
+    case "log":
+      return Math.log(value / range.min) / Math.log(range.max / range.min);
+    default:
+      return (value - range.min) / (range.max - range.min);
+  }
+}
+
+/** The stored value for a dial position; the inverse of dialPosition. */
+export function dialValue(position: number, scale: KnobScale, range = { min: 0, max: 1 }): number {
+  const p = Math.min(1, Math.max(0, position));
+  switch (scale) {
+    case "taper":
+      return interpolate(p, TAPER_POINTS.map(([x, y]) => [y, x]));
+    case "log":
+      return range.min * Math.pow(range.max / range.min, p);
+    default:
+      return range.min + p * (range.max - range.min);
+  }
+}
+
+/** The number the amp shows for a dial position: 1-10 or 0-10, one decimal. */
+export function dialReading(position: number, scale: KnobScale): string {
+  const shown = scale === "oneToTen" ? 1 + 9 * position : 10 * position;
+  return shown.toFixed(1);
+}
+
+/** Choices the amp offers that the factory presets don't all use. */
+export const CHOICES: Partial<Record<BlockName, Record<string, Record<string, string[]>>>> = {
+  stomp: { VariFuzz: { tone: ["tight", "normal", "loose"] } },
+};
