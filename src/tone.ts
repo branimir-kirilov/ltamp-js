@@ -185,14 +185,32 @@ export function buildPreset(tone: Tone, catalog: Catalog): BuildResult {
   if (shortModel(fenderId(tone.amp?.model ?? OFF)) === OFF) errors.push("amp: a tone needs an amp model");
   if (errors.length) throw new ToneError(errors);
 
-  const preset: Preset = {
+  return { preset: wrapPreset(tone.name, graphNodes), warnings };
+}
+
+/**
+ * The factory blank, as found in an unused slot: every block off and a flat,
+ * cabinet-less amp. Writing it to a slot empties the slot; `isBlank` is true
+ * for it. Each call gets a fresh preset_id, so a write can be verified.
+ */
+export function blankPreset(): Preset {
+  const nodes: PresetNode[] = BLOCKS.map((nodeId) =>
+    nodeId === "amp"
+      ? { nodeId, nodeType: "dspUnit", FenderId: BLANK_AMP.FenderId, dspUnitParameters: { ...BLANK_AMP.params } }
+      : { nodeId, nodeType: "dspUnit", FenderId: PREFIX + OFF, dspUnitParameters: {} },
+  );
+  return wrapPreset("EMPTY", nodes);
+}
+
+function wrapPreset(name: string, nodes: PresetNode[]): Preset {
+  return {
     nodeType: "preset",
     nodeId: "preset",
     version: "1.1",
     numInputs: 2,
     numOutputs: 2,
     info: {
-      displayName: displayName(tone.name),
+      displayName: displayName(name),
       preset_id: crypto.randomUUID(),
       author: "",
       source_id: "",
@@ -202,9 +220,8 @@ export function buildPreset(tone: Tone, catalog: Catalog): BuildResult {
       is_factory_default: false,
       bpm: 0,
     },
-    audioGraph: { nodes: graphNodes, connections: chainConnections() },
+    audioGraph: { nodes, connections: chainConnections() },
   };
-  return { preset, warnings };
 }
 
 const RATE_KEYS = ["rate", "rateHz", "rotor"];

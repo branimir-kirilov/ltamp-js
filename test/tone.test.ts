@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildCatalog } from "../src/catalog.js";
 import { isFixedSetting, KNOWN_MODELS, knobRange, modelLabel } from "../src/models.js";
-import { buildPreset, displayName, isBlank, summarize, syncTempo, toTone, ToneError, type Preset } from "../src/tone.js";
+import { blankPreset, buildPreset, displayName, presetName, isBlank, summarize, syncTempo, toTone, ToneError, type Preset } from "../src/tone.js";
 
 // Hand-made presets in the amp's format (not copies of factory presets).
 const node = (nodeId: string, FenderId: string, dspUnitParameters: Record<string, unknown> = {}) => ({
@@ -86,6 +86,21 @@ describe("catalog", () => {
     expect(modelLabel("stomp", "Greenbox")).toBe("Blues Drive");
     expect(modelLabel("delay", "Passthru")).toBe("None");
     expect(modelLabel("amp", "FutureAmp")).toBe("FutureAmp");
+  });
+});
+
+describe("blankPreset", () => {
+  it("is the factory blank, with a fresh id each time", () => {
+    const a = blankPreset();
+    expect(isBlank(a)).toBe(true);
+    expect(presetName(a)).toBe("EMPTY");
+    expect(a.audioGraph!.connections).toHaveLength(12);
+    expect(a.info!.preset_id).not.toBe(blankPreset().info!.preset_id);
+  });
+
+  it("matches the blank test fixture block for block", () => {
+    const nodes = (p: Preset) => p.audioGraph!.nodes!.map((n) => [n.nodeId, n.FenderId, n.dspUnitParameters]);
+    expect(nodes(blankPreset())).toEqual(nodes(blank));
   });
 });
 

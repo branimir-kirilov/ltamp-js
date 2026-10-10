@@ -19,6 +19,7 @@ export {
 export {
   BLOCKS,
   NAME_LENGTH,
+  blankPreset,
   buildPreset,
   displayName,
   fenderId,
