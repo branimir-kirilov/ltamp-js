@@ -239,7 +239,8 @@ const TAPER_POINTS: [number, number][] = [
 export function knobScale(block: BlockName, model: string, key: string): KnobScale | undefined {
   if (TAPERED[block]?.[model]?.includes(key)) return "taper";
   if (LOG_SPEED[block]?.[model]?.includes(key)) return "log";
-  if (knobRange(block, model, key)) return undefined;
+  // Knobs with a unit (dB, seconds, Hz) are shown in that unit; unitless ones read 1-10.
+  if (knobRange(block, model, key)?.unit) return undefined;
   return "oneToTen";
 }
 

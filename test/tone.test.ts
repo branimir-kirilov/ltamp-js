@@ -245,6 +245,8 @@ describe("knob display scales (measured in Fender Tone)", () => {
     expect(reads("stomp", "VariFuzz", "level", 0.5)).toBe("7.2");
     expect(reads("mod", "ChorusTriangle", "level", 0.5)).toBe("7.2");
     expect(reads("mod", "ChorusTriangle", "rateHz", 5.04)).toBe("8.6");
+    expect(reads("delay", "MonoDelay", "level", 0.5)).toBe("5.5");
+    expect(knobScale("amp", "Twin65", "volume")).toBeUndefined();
   });
 
   it("round-trips between dial and stored value", () => {
