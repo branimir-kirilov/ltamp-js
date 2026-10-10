@@ -38,6 +38,12 @@ interface Pending {
   timer: ReturnType<typeof setTimeout>;
 }
 
+/**
+ * The amp ends a session after 12–25 s without hearing from us (measured on an
+ * LT25). Past this much silence, assume it has and run the handshake again.
+ */
+const SILENCE_LIMIT = 8000;
+
 const statusNames = Object.fromEntries(Object.entries(UnsupportedStatus).map(([k, v]) => [v, k]));
 
 /**
@@ -55,6 +61,10 @@ export class LtAmp {
   private pending?: Pending;
   private queue: Promise<unknown> = Promise.resolve();
   private closed = false;
+  /** When the last message finished writing (ms since epoch). */
+  private lastWrite = 0;
+  /** The amp may have dropped the session; re-sync before the next request. */
+  private stale = false;
   /** Writes in flight. Each message's reports must reach the amp back to back. */
   private writing: Promise<void> = Promise.resolve();
 
@@ -76,14 +86,16 @@ export class LtAmp {
 
   /** Run the sync handshake and start the heartbeat. Call once after opening. */
   async connect(): Promise<void> {
-    await this.request("modalStatusMessage", { context: ModalContext.SYNC_BEGIN, state: ModalState.OK }, [
-      "modalStatusMessage",
-    ]);
-    await this.request("modalStatusMessage", { context: ModalContext.SYNC_END, state: ModalState.OK }, [
-      "modalStatusMessage",
-    ]);
+    await this.enqueue(() => this.sync());
+    clearInterval(this.heartbeat);
     this.heartbeat = setInterval(() => {
-      this.send("heartbeat", { dummyField: true }).catch(() => {});
+      // Timers can stall (browsers throttle background tabs), and the amp then
+      // drops the session. Rejoin it instead of sending into the void.
+      if (this.stale || Date.now() - this.lastWrite > SILENCE_LIMIT) {
+        this.enqueue(() => this.resyncIfStale()).catch(() => {});
+      } else {
+        this.send("heartbeat", { dummyField: true }).catch(() => {});
+      }
     }, this.heartbeatInterval);
     (this.heartbeat as { unref?: () => void }).unref?.();
   }
@@ -182,34 +194,66 @@ export class LtAmp {
     const reports = frame(encodeMessage(name, payload));
     const write = async () => {
       for (const report of reports) await this.transport.write(report);
+      this.lastWrite = Date.now();
     };
     const result = this.writing.then(write, write);
     this.writing = result.catch(() => {});
     return result;
   }
 
-  /** Send a message and wait for the first reply whose payload is one of `expect`. */
+  /**
+   * Send a message and wait for the first reply whose payload is one of
+   * `expect`. If the amp may have dropped the session, re-syncs first.
+   */
   request<N extends PayloadName, R extends PayloadName>(
     name: N,
     payload: Partial<PayloadOf<N>>,
     expect: readonly R[],
   ): Promise<Message<R>> {
-    const run = () =>
-      new Promise<Message<R>>((resolve, reject) => {
-        const timer = setTimeout(() => {
-          this.pending = undefined;
-          reject(new Error(`Timed out waiting for ${expect.join(" or ")} after ${name}`));
-        }, this.timeout);
-        this.pending = { expect, resolve: resolve as (m: Message) => void, reject, timer };
-        this.send(name, payload).catch((e) => {
-          clearTimeout(timer);
-          this.pending = undefined;
-          reject(e);
-        });
-      });
-    const result = this.queue.then(run, run);
+    return this.enqueue(async () => {
+      await this.resyncIfStale();
+      return this.exchange(name, payload, expect);
+    });
+  }
+
+  /** Run `task` after every earlier request has finished. */
+  private enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const result = this.queue.then(task, task);
     this.queue = result.catch(() => {});
     return result;
+  }
+
+  /** The sync handshake that opens a session. */
+  private async sync(): Promise<void> {
+    for (const context of [ModalContext.SYNC_BEGIN, ModalContext.SYNC_END]) {
+      await this.exchange("modalStatusMessage", { context, state: ModalState.OK }, ["modalStatusMessage"]);
+    }
+    this.stale = false;
+  }
+
+  private async resyncIfStale(): Promise<void> {
+    if (this.stale || Date.now() - this.lastWrite > SILENCE_LIMIT) await this.sync();
+  }
+
+  private exchange<N extends PayloadName, R extends PayloadName>(
+    name: N,
+    payload: Partial<PayloadOf<N>>,
+    expect: readonly R[],
+  ): Promise<Message<R>> {
+    return new Promise<Message<R>>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pending = undefined;
+        // No reply usually means the amp dropped the session.
+        this.stale = true;
+        reject(new Error(`Timed out waiting for ${expect.join(" or ")} after ${name}`));
+      }, this.timeout);
+      this.pending = { expect, resolve: resolve as (m: Message) => void, reject, timer };
+      this.send(name, payload).catch((e) => {
+        clearTimeout(timer);
+        this.pending = undefined;
+        reject(e);
+      });
+    });
   }
 
   private dispatch(bytes: Uint8Array): void {
