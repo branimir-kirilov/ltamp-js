@@ -149,7 +149,12 @@ const RANGES: Record<BlockName, Record<string, Record<string, KnobRange>>> = {
     Phaser: { rate: { min: 0.08, max: 10, unit: "Hz" } },
     StepFilter: { rate: { min: 0.08, max: 10, unit: "Hz" } },
   },
-  amp: { "*": { volume: { min: -60, max: 0, unit: "dB" } } },
+  amp: {
+    "*": { volume: { min: -60, max: 0, unit: "dB" } },
+    // An ordinary 1-10 knob on the amp; factory and AI presets sometimes store
+    // negative values here, which the amp shows as 1 (fully off).
+    Plexi87: { mid: { min: 0, max: 1 } },
+  },
   delay: {
     "*": {
       time: { min: 0.03, max: 1, unit: "s" },
@@ -256,6 +261,11 @@ function interpolate(x: number, points: [number, number][]): number {
 
 /** Where a stored value sits on the dial, 0 (fully left) to 1 (fully right). */
 export function dialPosition(value: number, scale: KnobScale, range = { min: 0, max: 1 }): number {
+  // Out-of-range values read as the end of the dial, as on the amp.
+  return Math.min(1, Math.max(0, rawPosition(value, scale, range)));
+}
+
+function rawPosition(value: number, scale: KnobScale, range: { min: number; max: number }): number {
   switch (scale) {
     case "taper":
       return interpolate(value, TAPER_POINTS);
